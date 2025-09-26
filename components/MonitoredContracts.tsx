@@ -4,6 +4,35 @@ import { useWallet } from '../contexts/WalletContext';
 import { MonitoredContract, NormalizedEvent } from '../types';
 import { PlusCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon, ClockIcon } from './Icons';
 
+const JsonViewer: React.FC<{ data: Record<string, any> }> = ({ data }) => {
+    const jsonString = JSON.stringify(
+      data,
+      (key, value) => (typeof value === 'bigint' ? value.toString() : value),
+      2
+    );
+  
+    // Basic syntax highlighting with regex
+    const highlightedJson = jsonString
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') // HTML escape
+      .replace(/"(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?/g, (match) => { // Match strings and keys
+        let cls = 'text-green-400'; // String color
+        if (/:$/.test(match)) {
+          cls = 'text-amber-400'; // Key color
+        }
+        return `<span class="${cls}">${match}</span>`;
+      })
+      .replace(/\b(true|false)\b/g, '<span class="text-purple-400">$1</span>') // Boolean
+      .replace(/\b(null)\b/g, '<span class="text-slate-500">$1</span>') // Null
+      .replace(/\b-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b(?!<\/span>)/g, '<span class="text-sky-400">$&</span>'); // Number (ensuring it's not inside a span already)
+  
+    return (
+      <pre
+        className="mt-2 text-xs bg-slate-950 p-3 rounded-md text-slate-400 font-mono overflow-x-auto"
+        dangerouslySetInnerHTML={{ __html: highlightedJson }}
+      />
+    );
+};
+
 const EventCard: React.FC<{ event: NormalizedEvent }> = ({ event }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const etherscanLink = `https://etherscan.io/tx/${event.transactionHash}`;
@@ -32,12 +61,7 @@ const EventCard: React.FC<{ event: NormalizedEvent }> = ({ event }) => {
                     {isExpanded ? <ChevronUpIcon className="w-3 h-3" /> : <ChevronDownIcon className="w-3 h-3" />}
                     {isExpanded ? 'Hide Data' : 'Show Data'}
                 </button>
-                {isExpanded && (
-                    <pre className="mt-2 text-xs bg-slate-950 p-3 rounded-md text-slate-400 font-mono overflow-x-auto">
-                        {JSON.stringify(event.args, (key, value) => 
-                            typeof value === 'bigint' ? value.toString() : value, 2)}
-                    </pre>
-                )}
+                {isExpanded && <JsonViewer data={event.args} />}
             </div>
         </div>
     );

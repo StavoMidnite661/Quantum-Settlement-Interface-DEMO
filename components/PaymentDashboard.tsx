@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Payment, PaymentStatus, Priority } from '../types';
-import { MOCK_PAYMENTS } from '../constants';
 import { PaymentCard } from './PaymentCard';
 import { ProgressBar } from './ProgressBar';
 import { FilterControls, type SortOption } from './FilterControls';
@@ -10,60 +9,15 @@ import { AISentinel } from './AISentinel';
 import { ContractListener } from './ContractListener';
 
 export const PaymentDashboard: React.FC = () => {
-  const [payments, setPayments] = useState<Payment[]>(() => [...MOCK_PAYMENTS].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [filterStatus, setFilterStatus] = useState<PaymentStatus | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [view, setView] = useState<{ page: 'dashboard' | 'profile'; userId?: string }>({ page: 'dashboard' });
 
-  // Simulate real-time updates more realistically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPayments(currentPayments => {
-        let hasChanged = false;
-        const newPayments = currentPayments.map(p => {
-          // Do not update live transactions
-          if (p.isLive) return p;
-          
-          // Give pending payments a chance to start processing
-          if (p.status === PaymentStatus.PENDING && Math.random() < 0.2) { // 20% chance
-            hasChanged = true;
-            return {
-              ...p,
-              status: PaymentStatus.PROCESSING,
-              updated_at: new Date().toISOString(),
-            };
-          }
-          // Give processing payments a chance to resolve
-          if (p.status === PaymentStatus.PROCESSING && Math.random() < 0.3) { // 30% chance
-            hasChanged = true;
-            const newStatus = Math.random() > 0.1 ? PaymentStatus.SETTLED : PaymentStatus.FAILED;
-            return {
-              ...p,
-              status: newStatus,
-              updated_at: new Date().toISOString(),
-              settlement_data: {
-                ...p.settlement_data,
-                status: newStatus === PaymentStatus.SETTLED ? 'confirmed' : 'reverted',
-                blockchain_tx_hash: p.id,
-                settled_at: new Date().toISOString(),
-              },
-            };
-          }
-          return p;
-        });
-
-        // Only return a new array if something actually changed
-        return hasChanged ? newPayments : currentPayments;
-      });
-    }, 3000); // Update every 3 seconds for a more dynamic feel
-
-    return () => clearInterval(interval);
-  }, []);
-
   const handleNewPayment = useCallback((newPayment: Payment) => {
-    setPayments(currentPayments => [newPayment, ...currentPayments]);
+    setPayments(currentPayments => [newPayment, ...currentPayments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
   }, []);
 
   const filteredPayments = useMemo(() => {

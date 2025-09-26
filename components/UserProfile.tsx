@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Payment, User } from '../types';
-import { MOCK_PAYMENTS } from '../constants'; // To find user details
 import { ArrowLeftIcon, UserIcon, ArrowUpIcon, ArrowDownIcon } from './Icons';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 
@@ -19,7 +18,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, allPayments, onBack }
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'created_at', direction: 'desc' });
 
   useEffect(() => {
-    // In a real app, you might fetch user details. Here we find them.
+    // In a real app, you might fetch user details from an API. Here we find them from the list of all payments.
     const paymentWithUser = allPayments.find(p => p.user.id === userId);
     if (paymentWithUser) {
         setUser(paymentWithUser.user);

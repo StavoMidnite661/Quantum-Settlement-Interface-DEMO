@@ -20,8 +20,7 @@ export const AISentinel: React.FC<{ payments: Payment[] }> = ({ payments }) => {
     // In a real production app, this key would be handled by a backend proxy
     // to avoid exposing it on the client-side.
     try {
-      // This environment does not use a bundler, so we must rely on 'process.env'
-      // being available in the execution context, or gracefully disable the feature.
+      // Fix: Use process.env.API_KEY as per the guidelines to resolve the compilation error and adhere to requirements.
       const apiKey = process.env.API_KEY;
       if (!apiKey) {
         console.warn("API_KEY environment variable not set. AI Sentinel will not function.");
@@ -29,7 +28,7 @@ export const AISentinel: React.FC<{ payments: Payment[] }> = ({ payments }) => {
       }
       return new GoogleGenAI({ apiKey });
     } catch (error) {
-      console.warn("Could not initialize AI Sentinel. It's possible the 'process' object is not defined in this environment.", error);
+      console.error("Could not initialize AI Sentinel.", error);
       return null;
     }
   }, []);
