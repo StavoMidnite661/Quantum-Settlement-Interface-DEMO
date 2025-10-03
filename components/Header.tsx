@@ -1,6 +1,7 @@
 import React from 'react';
 import { QuantumIcon } from './Icons';
 import { useWallet } from '../contexts/WalletContext';
+import { NetworkStatus } from './NetworkStatus';
 
 const WalletConnect: React.FC = () => {
   const { connectWallet, isConnected, account } = useWallet();
@@ -46,10 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ activeView, onNavigate }) => {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-full pl-4 pr-4 py-1.5">
-              <div className="w-3 h-3 rounded-full bg-cyan-500 animate-pulse"></div>
-              <span className="text-sm text-cyan-400 font-mono hidden sm:inline">Protocol Live</span>
-            </div>
+            <NetworkStatus />
             <div>
               <WalletConnect />
             </div>

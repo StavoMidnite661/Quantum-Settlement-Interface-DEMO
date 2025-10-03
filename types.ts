@@ -80,3 +80,30 @@ export interface NormalizedEvent {
   blockNumber: number;
   timestamp: number;
 }
+
+export interface ToastMessage {
+  id: string;
+  title: string;
+  description?: string;
+  type: 'info' | 'success' | 'error';
+}
+
+// Types for the Ledger Visualizer
+export interface GraphNode {
+  id: string; // user.id or description (retailer)
+  label: string;
+  type: 'user' | 'retailer';
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  isHighlighted?: boolean;
+}
+
+export interface GraphEdge {
+  id: string; // payment.id
+  source: string; // user.id
+  target: string; // description (retailer)
+  payment: Payment;
+  isNew?: boolean;
+}

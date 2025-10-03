@@ -9,18 +9,19 @@ interface Message {
   isInsight?: boolean;
 }
 
-export const AISentinel: React.FC<{ payments: Payment[] }> = ({ payments }) => {
+interface AISentinelProps {
+    payments: Payment[];
+    onHighlightNodes: (nodeIds: string[]) => void;
+}
+
+export const AISentinel: React.FC<AISentinelProps> = ({ payments, onHighlightNodes }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   
   const ai = useMemo(() => {
-    // As per instructions, API_KEY is assumed to be in the environment.
-    // In a real production app, this key would be handled by a backend proxy
-    // to avoid exposing it on the client-side.
     try {
-      // Fix: Use process.env.API_KEY as per the guidelines to resolve the compilation error and adhere to requirements.
       const apiKey = process.env.API_KEY;
       if (!apiKey) {
         console.warn("API_KEY environment variable not set. AI Sentinel will not function.");
@@ -36,15 +37,22 @@ export const AISentinel: React.FC<{ payments: Payment[] }> = ({ payments }) => {
   const initialInsights = useMemo(() => {
     const flaggedPayments = payments.filter(p => p.ai_flag);
     const insights = new Set<string>();
+
     if (flaggedPayments.length > 0) {
         insights.add(`Sentinel has detected ${flaggedPayments.length} transactions with anomalies. Hover over the icon on the card for details.`);
+        const flaggedUserIds = [...new Set(flaggedPayments.map(p => p.user.id))];
+        onHighlightNodes(flaggedUserIds);
+    } else {
+        onHighlightNodes([]);
     }
+
     const highPriorityPending = payments.filter(p => p.priority === 'High' && p.status === 'pending_approval');
     if (highPriorityPending.length > 0) {
         insights.add(`There are ${highPriorityPending.length} high-priority payments pending approval.`);
     }
+
     return Array.from(insights);
-  }, [payments]);
+  }, [payments, onHighlightNodes]);
 
   useEffect(() => {
     if (initialInsights.length > 0 && messages.length === 0) {
@@ -121,12 +129,12 @@ export const AISentinel: React.FC<{ payments: Payment[] }> = ({ payments }) => {
   };
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4 space-y-4">
+    <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4 space-y-4 h-full flex flex-col">
       <div className="flex items-center gap-3">
         <BrainCircuitIcon className="w-6 h-6 text-cyan-400" />
         <h2 className="text-xl font-semibold text-slate-300">AI Sentinel</h2>
       </div>
-      <div ref={chatContainerRef} className="max-h-60 overflow-y-auto pr-2 space-y-4 text-sm">
+      <div ref={chatContainerRef} className="flex-grow max-h-96 overflow-y-auto pr-2 space-y-4 text-sm">
         {messages.map((msg, index) => (
           <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
             {msg.role === 'model' && <BrainCircuitIcon className="w-5 h-5 text-cyan-500 flex-shrink-0 mt-1" />}
@@ -150,7 +158,7 @@ export const AISentinel: React.FC<{ payments: Payment[] }> = ({ payments }) => {
             </div>
         )}
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="mt-auto">
         <input
           type="text"
           value={input}

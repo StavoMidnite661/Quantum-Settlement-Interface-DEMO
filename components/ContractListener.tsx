@@ -5,6 +5,8 @@ import { POS_CREDIT_TOKEN_ABI } from '../abi';
 import { parsePaymentEvent } from '../utils/helpers';
 import { Payment } from '../types';
 import { WifiIcon } from './Icons';
+import { ConfirmationModal } from './ConfirmationModal';
+import { useToast } from '../contexts/ToastContext';
 
 interface ContractListenerProps {
   onNewPayment: (payment: Payment) => void;
@@ -16,6 +18,14 @@ export const ContractListener: React.FC<ContractListenerProps> = ({ onNewPayment
   const [isListening, setIsListening] = useState(false);
   const [monitoredContracts, setMonitoredContracts] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const { addToast } = useToast();
+
+  const [confirmation, setConfirmation] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const handleEvent = useCallback(async (log: EventLog) => {
     console.log('Event received:', log);
@@ -71,6 +81,7 @@ export const ContractListener: React.FC<ContractListenerProps> = ({ onNewPayment
         
         setMonitoredContracts(addresses);
         setIsListening(true);
+        addToast({ title: 'Listener Started', description: 'Now monitoring for on-chain events.', type: 'success' });
     } catch(e) {
         console.error("Failed to start listener:", e);
         setError("An unexpected error occurred while starting the listener.");
@@ -83,56 +94,89 @@ export const ContractListener: React.FC<ContractListenerProps> = ({ onNewPayment
     }
     setIsListening(false);
     setMonitoredContracts([]);
+    addToast({ title: 'Listener Stopped', description: 'No longer monitoring for events.', type: 'info' });
+  };
+  
+  const confirmStartListening = () => {
+    const addresses = inputValue.split(',').map(addr => addr.trim()).filter(Boolean);
+    if (addresses.length === 0) {
+        setError("Please enter at least one contract address.");
+        return;
+    }
+    setConfirmation({
+        isOpen: true,
+        title: 'Start Listener',
+        message: `Are you sure you want to start monitoring ${addresses.length} contract(s)? This will establish a persistent connection.`,
+        onConfirm: handleStartListening,
+    });
+  };
+
+  const confirmStopListening = () => {
+      setConfirmation({
+          isOpen: true,
+          title: 'Stop Listener',
+          message: 'Are you sure you want to stop all contract listeners?',
+          onConfirm: handleStopListening,
+      });
   };
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-3">
-        <WifiIcon className={`w-6 h-6 ${isListening ? 'text-green-400 animate-pulse' : 'text-slate-500'}`} />
-        <h2 className="text-xl font-semibold text-slate-300">Live Contract Listener</h2>
-      </div>
-      
-      {!isConnected ? (
-        <p className="text-sm text-slate-500">Connect your wallet to monitor on-chain events in real-time.</p>
-      ) : (
-        <>
-            <p className="text-sm text-slate-400">
-                Enter comma-separated contract addresses to monitor for <code className="bg-slate-800 text-cyan-400 px-1 py-0.5 rounded text-xs">BurnForPurchase</code> events.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="0x..., 0x..."
-                    disabled={isListening}
-                    className="flex-grow bg-slate-800 border border-slate-700 rounded-md py-2 px-4 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 disabled:opacity-50"
-                />
-                {!isListening ? (
-                <button 
-                    onClick={handleStartListening}
-                    className="px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-md shadow-cyan-500/20"
-                >
-                    Start Listening
-                </button>
-                ) : (
-                <button
-                    onClick={handleStopListening}
-                    className="px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 bg-red-500 text-slate-50 hover:bg-red-400"
-                >
-                    Stop Listening
-                </button>
-                )}
-            </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
-            {isListening && monitoredContracts.length > 0 && (
-                <div className="text-xs text-slate-500">
-                    <span className="font-semibold text-green-400">Monitoring {monitoredContracts.length} contract(s): </span>
-                    <span className="font-mono">{monitoredContracts.join(', ')}</span>
+    <>
+        <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-3">
+            <WifiIcon className={`w-6 h-6 ${isListening ? 'text-green-400 animate-pulse' : 'text-slate-500'}`} />
+            <h2 className="text-xl font-semibold text-slate-300">Live Contract Listener</h2>
+        </div>
+        
+        {!isConnected ? (
+            <p className="text-sm text-slate-500">Connect your wallet to monitor on-chain events in real-time.</p>
+        ) : (
+            <>
+                <p className="text-sm text-slate-400">
+                    Enter comma-separated contract addresses to monitor for <code className="bg-slate-800 text-cyan-400 px-1 py-0.5 rounded text-xs">BurnForPurchase</code> events.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        placeholder="0x..., 0x..."
+                        disabled={isListening}
+                        className="flex-grow bg-slate-800 border border-slate-700 rounded-md py-2 px-4 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 disabled:opacity-50"
+                    />
+                    {!isListening ? (
+                    <button 
+                        onClick={confirmStartListening}
+                        className="px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-md shadow-cyan-500/20"
+                    >
+                        Start Listening
+                    </button>
+                    ) : (
+                    <button
+                        onClick={confirmStopListening}
+                        className="px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 bg-red-500 text-slate-50 hover:bg-red-400"
+                    >
+                        Stop Listening
+                    </button>
+                    )}
                 </div>
-            )}
-        </>
-      )}
-    </div>
+                {error && <p className="text-xs text-red-400">{error}</p>}
+                {isListening && monitoredContracts.length > 0 && (
+                    <div className="text-xs text-slate-500">
+                        <span className="font-semibold text-green-400">Monitoring {monitoredContracts.length} contract(s): </span>
+                        <span className="font-mono">{monitoredContracts.join(', ')}</span>
+                    </div>
+                )}
+            </>
+        )}
+        </div>
+        <ConfirmationModal
+            isOpen={!!confirmation?.isOpen}
+            onClose={() => setConfirmation(null)}
+            onConfirm={confirmation?.onConfirm || (() => {})}
+            title={confirmation?.title || ''}
+            message={confirmation?.message || ''}
+        />
+    </>
   );
 };
